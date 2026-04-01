@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  /* আপনার কাস্টম স্পেসিং এবং রেডিয়াস এখানে যোগ করুন */
+  --spacing-100: 400px;
+  --spacing-125: 500px;
+  --spacing-45: 180px;
+  --radius-4xl: 2rem;
+}
