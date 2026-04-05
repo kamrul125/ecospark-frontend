@@ -3,24 +3,40 @@ import { useEffect, useState } from "react";
 
 export default function Navbar() {
   const [token, setToken] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState<boolean>(false); // প্রো স্ট্যাটাস চেক করার জন্য
+  const [isPro, setIsPro] = useState<boolean>(false);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    setToken(storedToken);
+    // উইন্ডো চেক (Next.js এর জন্য নিরাপদ)
+    if (typeof window !== "undefined") {
+      try {
+        const storedToken = localStorage.getItem("token");
+        setToken(storedToken);
 
-    // যদি আপনার টোকেন বা ইউজার ডাটাতে 'role' বা 'isPaid' থাকে, তবে এখানে চেক করতে পারেন
-    // আপাতত ডামি লজিক হিসেবে রাখা হলো
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user.role === "PRO") {
-      setIsPro(true);
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          const user = JSON.parse(userData);
+
+          // 🛠️ Safety Check: যদি ইউজার ডাটা ভুল করে অবজেক্ট হিসেবে রেন্ডার হওয়ার চেষ্টা করে
+          // আপনার ডাটাবেসে role যদি স্ট্রিং হয় তবে এভাবে চেক করুন
+          if (user && typeof user === "object" && user.role === "PRO") {
+            setIsPro(true);
+          }
+        }
+      } catch (error) {
+        console.error("User data parsing failed, clearing corrupted data:", error);
+        // যদি ডাটা করাপ্ট থাকে, তবে লোকাল স্টোরেজ পরিষ্কার করে দেওয়া ভালো
+        localStorage.removeItem("user");
+      }
     }
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user"); // ইউজার ডাটাও রিমুভ করুন
-    window.location.href = "/auth/login";
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      window.location.href = "/auth/login";
+    }
   };
 
   return (
@@ -54,7 +70,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* 💎 PRO/Subscription Button (লগইন করা থাকলে এবং প্রো না হলে দেখাবে) */}
+          {/* 💎 PRO/Subscription Button */}
           {token && !isPro && (
             <Link 
               href="/subscribe" 

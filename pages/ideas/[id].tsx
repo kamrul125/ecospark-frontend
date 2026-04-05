@@ -6,127 +6,199 @@ import Footer from "../../components/Footer";
 
 export default function IdeaDetails() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id: queryId } = router.query;
+  
+  // আইডি নিশ্চিত করা
+  const id = Array.isArray(queryId) ? queryId[0] : queryId;
+
   const [idea, setIdea] = useState<any>(null);
+  const [votes, setVotes] = useState(0);
+  const [voting, setVoting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      API.get(`/ideas/${id}`)
-        .then((res) => setIdea(res.data))
-        .catch((err) => console.log(err))
-        .finally(() => setLoading(false));
+  const getAuthToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("token") || localStorage.getItem("accessToken");
     }
-  }, [id]);
+    return null;
+  };
 
+  // ১. আইডিয়া ডিটেইলস ফেচ করা
+  useEffect(() => {
+    // router.isReady নিশ্চিত করে যে আইডিটি পাওয়া গেছে
+    if (!router.isReady || !id) return;
+
+    const fetchIdeaDetails = async () => {
+      try {
+        setLoading(true);
+        const res: any = await API.get(`/ideas/${id}`);
+        const data = res.data?.data || res.data;
+        
+        if (data) {
+          setIdea(data);
+          // ভোট কাউন্ট সেট করা (Prisma _count রিলেশন অথবা voteCount)
+          setVotes(data?._count?.votes ?? data?.voteCount ?? 0);
+        }
+      } catch (err) {
+        console.error("Fetch Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIdeaDetails();
+  }, [id, router.isReady]);
+
+  // ২. ভোট হ্যান্ডেল করা
   const handleVote = async () => {
+    const token = getAuthToken();
+    if (!token) return alert("দয়া করে ভোট দিতে লগইন করুন! 🔑");
+
     try {
-      await API.post(`/ideas/${id}/vote`);
-      alert("ধন্যবাদ! আপনার ভোটটি সফলভাবে জমা হয়েছে।💚");
-    } catch (err) {
-      alert("ভোট দিতে সমস্যা হয়েছে। অনুগ্রহ করে লগইন করুন।");
+      setVoting(true);
+      await API.post(
+        `/votes/${id}`, 
+        { type: "UPVOTE" }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setVotes((prev) => prev + 1);
+      alert("ভোট সফল হয়েছে! 💚");
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "সম্ভবত আপনি অলরেডি ভোট দিয়েছেন।";
+      alert(`❌ ${errorMsg}`);
+    } finally {
+      setVoting(false);
+    }
+  };
+
+  // ৩. আপডেট হ্যান্ডেল করা
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = getAuthToken();
+    if (!token) return alert("আপডেট করতে লগইন প্রয়োজন!");
+
+    try {
+      setUpdating(true);
+      await API.patch(
+        `/ideas/${id}`, 
+        {
+          title: idea?.title,
+          description: idea?.description,
+          image: idea?.image 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("সফলভাবে আপডেট হয়েছে! ✨");
+    } catch (err: any) {
+      alert("আপডেট ব্যর্থ হয়েছে! ডাটাগুলো আবার চেক করুন।");
+    } finally {
+      setUpdating(false);
     }
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-12 h-12 border-t-4 border-green-600 rounded-full animate-spin"></div>
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="w-10 h-10 border-t-4 border-green-600 rounded-full animate-spin"></div>
     </div>
   );
-  
+
   if (!idea) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <p className="mb-4 text-2xl font-black text-red-500">Idea not found!</p>
-      <button onClick={() => router.push('/')} className="font-bold text-green-600 hover:underline">Go Home</button>
+      <p className="text-xl font-black text-rose-500">আইডিয়াটি খুঁজে পাওয়া যায়নি! ❌</p>
+      <button onClick={() => router.push("/ideas")} className="px-6 py-2 mt-4 font-bold text-white bg-green-600 shadow-lg rounded-xl">
+        আইডিয়া লিস্টে ফিরে যান
+      </button>
     </div>
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen font-sans bg-gray-50">
       <Navbar />
 
-      <main className="w-full max-w-5xl px-6 py-12 mx-auto grow">
-        {/* 🔙 Back Button */}
-        <button 
-          onClick={() => router.back()}
-          className="mb-8 flex items-center gap-2 text-gray-400 font-black hover:text-green-600 transition-all uppercase text-[10px] tracking-[0.2em]"
-        >
-          ← Back to Ideas
-        </button>
-
-        <div className="overflow-hidden bg-white border border-gray-100 shadow-2xl rounded-4xl shadow-green-100/40">
+      <main className="w-full max-w-4xl px-6 py-12 mx-auto grow">
+        <div className="overflow-hidden bg-white shadow-xl rounded-[40px] border border-gray-100">
           
-          {/* 🖼️ Hero Image using h-100 (400px) */}
-          <div className="relative w-full overflow-hidden h-100 group">
-            <img 
-              src={idea.image || "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e2?auto=format&fit=crop&q=80"} 
-              alt={idea.title}
-              className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-110"
+          <div className="relative bg-gray-200 h-80">
+            <img
+              src={idea?.image || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80"}
+              alt={idea?.title}
+              className="object-cover w-full h-full"
             />
-            {/* 🎨 Tailwind v4 Syntax: bg-linear-to-t */}
-            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent"></div>
-            
-            <div className="absolute bottom-8 left-10">
-              <span className="px-6 py-2.5 bg-green-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-2xl border border-green-500/50">
-                {idea.category}
+            <div className="absolute px-4 py-2 shadow-sm top-6 left-6 bg-white/90 backdrop-blur-md rounded-2xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-green-700">
+                {idea?.category?.name || "Innovation"}
               </span>
             </div>
           </div>
 
-          {/* 📝 Main Content Section */}
-          <div className="p-10 md:p-16 lg:p-20">
-            <div className="flex flex-col items-start justify-between gap-12 mb-16 lg:flex-row">
-              <div className="grow">
-                <h1 className="text-4xl md:text-6xl font-black text-gray-900 leading-[1.1] mb-8 tracking-tighter">
-                  {idea.title}
-                </h1>
-                <div className="flex flex-wrap items-center gap-6 text-gray-400 text-[10px] font-black uppercase tracking-[0.15em]">
-                  <span className="flex items-center gap-2">👤 Author Name</span>
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  <span className="flex items-center gap-2">📅 March 2026</span>
-                </div>
+          <div className="p-8 md:p-14">
+            <h1 className="mb-6 text-4xl font-black leading-tight text-gray-900 md:text-5xl">
+              {idea?.title}
+            </h1>
+
+            <p className="mb-10 text-lg font-medium leading-relaxed text-gray-500 whitespace-pre-line">
+              {idea?.description}
+            </p>
+
+            {/* VOTE CARD - Updated with bg-linear and rounded-4xl */}
+            <div className="flex flex-col items-center justify-between p-8 mb-12 border border-green-100 md:flex-row bg-linear-to-br from-green-50 to-emerald-50 rounded-4xl">
+              <div className="mb-6 text-center md:mb-0 md:text-left">
+                <p className="mb-1 text-xs font-black tracking-widest text-green-600 uppercase">Community Support</p>
+                <p className="text-4xl font-black text-gray-900">🔥 {votes} <span className="text-lg font-bold text-gray-400">Votes</span></p>
               </div>
 
-              {/* 🗳️ Vote Widget using min-w-45 (180px) */}
-              <div className="p-10 text-center transition-transform border border-green-100 shadow-sm bg-green-50 rounded-4xl min-w-45 hover:scale-105">
-                <p className="mb-1 text-5xl font-black leading-none tracking-tighter text-green-700">
-                  {idea.voteCount || 0}
-                </p>
-                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-8 opacity-70">Community Votes</p>
+              <button
+                onClick={handleVote}
+                disabled={voting}
+                className={`w-full md:w-auto px-12 py-5 font-black text-white rounded-2xl transition-all shadow-2xl active:scale-95 ${
+                  voting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {voting ? "Processing..." : "Vote for this Idea 💚"}
+              </button>
+            </div>
+
+            <div className="pt-12 border-t border-gray-100">
+              <h3 className="flex items-center gap-2 mb-8 text-2xl font-black text-gray-900">
+                <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>
+                Edit Idea Details
+              </h3>
+              
+              <form onSubmit={handleUpdate} className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="block mb-2 ml-2 text-xs font-black text-gray-400 uppercase">Title</label>
+                    <input
+                      value={idea?.title || ""}
+                      onChange={(e) => setIdea({ ...idea, title: e.target.value })}
+                      className="w-full p-5 font-bold text-gray-700 border border-gray-100 outline-none bg-gray-50 rounded-2xl focus:ring-4 focus:ring-indigo-100"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block mb-2 ml-2 text-xs font-black text-gray-400 uppercase">Description</label>
+                    <textarea
+                      rows={5}
+                      value={idea?.description || ""}
+                      onChange={(e) => setIdea({ ...idea, description: e.target.value })}
+                      className="w-full p-5 font-medium text-gray-600 border border-gray-100 outline-none bg-gray-50 rounded-2xl focus:ring-4 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+
                 <button 
-                  onClick={handleVote}
-                  className="w-full bg-green-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] hover:bg-green-700 shadow-xl shadow-green-200 transition-all active:scale-90"
+                  type="submit"
+                  disabled={updating}
+                  className={`w-full py-5 font-black text-white transition-all shadow-xl rounded-2xl active:scale-95 ${
+                    updating ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
-                  Vote Now 💚
+                  {updating ? "Updating..." : "Save Changes ✨"}
                 </button>
-              </div>
+              </form>
             </div>
-
-            {/* 📖 Description Area */}
-            <div className="max-w-none">
-              <div className="flex items-center gap-4 mb-8">
-                <h3 className="text-2xl font-black tracking-tight text-gray-900">
-                  Project Overview
-                </h3>
-                <div className="h-1 rounded-full grow bg-gray-50"></div>
-              </div>
-              <p className="text-gray-600 leading-[1.8] text-lg font-medium whitespace-pre-line">
-                {idea.description}
-              </p>
-            </div>
-
-            {/* 💎 Premium Badge */}
-            {idea.isPaid && (
-              <div className="flex items-center gap-8 p-10 mt-20 border shadow-sm bg-linear-to-r from-amber-50 to-orange-50 rounded-4xl border-amber-100">
-                <div className="text-5xl animate-bounce">💎</div>
-                <div>
-                    <h4 className="mb-1 text-xl font-black tracking-tight text-amber-900">Premium Architecture</h4>
-                    <p className="text-sm font-bold leading-relaxed text-amber-700/80">
-                        এই আইডিয়াটির পূর্ণাঙ্গ ব্লুপ্রিন্ট, খরচ এবং বাস্তবায়নের গাইড দেখতে প্রিমিয়াম মেম্বারশিপ প্রয়োজন।
-                    </p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

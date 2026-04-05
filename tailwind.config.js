@@ -1,9 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./app/**/*.{js,ts,jsx,tsx}", // যদি App Router ব্যবহার করেন তবে এটি যোগ করুন
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",        // App Router এর জন্য
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",      // Pages Router এর জন্য (আপনার member.tsx এখানে আছে)
+    "./components/**/*.{js,ts,jsx,tsx,mdx}", // সব কম্পোনেন্টের জন্য
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",        // যদি src ফোল্ডার ব্যবহার করেন
   ],
   theme: {
     extend: {
@@ -13,7 +14,7 @@ module.exports = {
         '45': '180px',
       },
       borderRadius: {
-        '4xl': '2rem',
+        '4xl': '2rem', // আপনার ড্যাশবোর্ডের rounded-4xl এর জন্য এটি জরুরি
       }
     },
   },

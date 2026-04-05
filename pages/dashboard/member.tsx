@@ -4,127 +4,141 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import Link from "next/link";
 
+interface Idea {
+  id: string;
+  title: string;
+  description?: string;
+  image?: string;
+  voteCount?: number;
+}
+
 export default function MemberDashboard() {
-  const [myIdeas, setMyIdeas] = useState<any[]>([]);
+  const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ Fetch Ideas
+  const fetchIdeas = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // ✅ Backend route এর সাথে match করা
+      const res = await API.get("/ideas"); // "my-ideas" না, backend অনুযায়ী
+      const rawData = res.data?.data || res.data?.result || res.data || [];
+      const finalData: Idea[] = Array.isArray(rawData) ? rawData : rawData ? [rawData] : [];
+      setIdeas(finalData);
+      console.log("Dashboard Data Loaded:", finalData);
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setIdeas([]);
+      setError("Failed to load your ideas. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // এখানে আপনার ব্যাকএন্ড এন্ডপয়েন্ট অনুযায়ী ডাটা ফেচ হবে
-    API.get("/ideas/my-ideas")
-      .then((res) => setMyIdeas(res.data))
-      .catch((err) => console.log(err))
-      .finally(() => setLoading(false));
+    fetchIdeas();
   }, []);
 
+  // ✅ Handle Delete
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this idea?")) {
-      try {
-        await API.delete(`/ideas/${id}`);
-        setMyIdeas(myIdeas.filter((idea) => idea.id !== id));
-      } catch (err) {
-        alert("Failed to delete idea");
-      }
+    if (!id) return alert("Error: Idea ID not found.");
+
+    if (!confirm("Are you sure you want to delete this idea?")) return;
+
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
+
+      await API.delete(`/ideas/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // UI থেকে সাথে সাথে রিমুভ করা
+      setIdeas((prev) => prev.filter((i) => i.id !== id));
+      alert("✅ Successfully deleted!");
+    } catch (err: any) {
+      console.error("Delete failed:", err.response?.data);
+      alert(err.response?.data?.message || "Failed to delete idea.");
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen font-sans bg-gray-50">
       <Navbar />
-
-      <main className="w-full px-6 py-12 mx-auto grow max-w-7xl">
-        {/* 📊 Dashboard Header */}
-        <div className="flex flex-col items-center justify-between gap-6 p-8 mb-12 bg-white border border-gray-100 shadow-sm md:flex-row rounded-4xl">
-          <div>
-            <h1 className="mb-2 text-4xl font-black text-gray-900">
-              Member <span className="text-green-600">Dashboard</span>
-            </h1>
-            <p className="italic font-medium text-gray-500">আপনার সব গ্রিন আইডিয়া এখান থেকে ম্যানেজ করুন।</p>
-          </div>
-          <Link 
-            href="/ideas/create" 
-            className="px-8 py-4 font-black text-white transition-all bg-green-600 shadow-lg rounded-2xl shadow-green-100 hover:bg-green-700 active:scale-95"
+      <main className="w-full max-w-6xl px-6 py-10 mx-auto grow">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-black text-gray-900">
+            My Dashboard <span className="text-green-600">({ideas.length})</span>
+          </h1>
+          <Link
+            href="/ideas/create"
+            className="px-6 py-3 font-bold text-white bg-green-600 rounded-2xl hover:bg-green-700 transition-all"
           >
-            + Create New Idea
+            + New Idea
           </Link>
         </div>
 
-        {/* 📈 Stats Summary */}
-        <div className="grid grid-cols-1 gap-6 mb-12 md:grid-cols-3">
-          <div className="p-6 text-center bg-white border border-gray-100 shadow-sm rounded-3xl">
-            <p className="mb-2 text-xs font-black tracking-widest text-gray-400 uppercase">Total Ideas</p>
-            <p className="text-4xl font-black text-gray-900">{myIdeas.length}</p>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+            <p className="mt-4 font-bold text-gray-500">Loading your ideas...</p>
           </div>
-          <div className="p-6 text-center bg-white border border-gray-100 shadow-sm rounded-3xl">
-            <p className="mb-2 text-xs font-black tracking-widest text-gray-400 uppercase">Active Status</p>
-            <p className="text-4xl font-black tracking-tighter text-green-600">Member</p>
+        ) : error ? (
+          <div className="p-20 text-center bg-white shadow-sm rounded-[40px] border border-dashed border-gray-300">
+            <p className="text-xl font-bold text-red-500">{error}</p>
           </div>
-          <div className="p-6 text-center bg-white border border-gray-100 shadow-sm rounded-3xl">
-            <p className="mb-2 text-xs font-black tracking-widest text-gray-400 uppercase">Impact Score</p>
-            <p className="text-4xl font-black text-amber-500">🏆 95</p>
+        ) : ideas.length === 0 ? (
+          <div className="p-20 text-center bg-white shadow-sm rounded-[40px] border border-dashed border-gray-300">
+            <p className="text-xl font-bold text-gray-400">You haven't shared any ideas yet.</p>
+            <Link
+              href="/ideas/create"
+              className="inline-block mt-4 text-green-600 font-black hover:underline"
+            >
+              Start sharing now 🚀
+            </Link>
           </div>
-        </div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {ideas.map((idea, index) => (
+              <div
+                key={idea.id || `idea-${index}`}
+                className="group p-5 bg-white border border-gray-100 shadow-xl rounded-4xl hover:shadow-2xl transition-all duration-300"
+              >
+                <div className="relative overflow-hidden rounded-2xl">
+                  <img
+                    src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"}
+                    className="object-cover w-full h-48 group-hover:scale-110 transition-transform duration-500"
+                    alt={idea.title || "Idea Image"}
+                  />
+                  <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black text-green-700 shadow-sm">
+                    🔥 {idea.voteCount || 0} Votes
+                  </div>
+                </div>
 
-        {/* 📝 My Ideas Table/List */}
-        <div className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-4xl">
-          <div className="flex items-center justify-between p-8 border-b border-gray-50">
-            <h2 className="text-2xl font-black text-gray-900">My Posted Ideas</h2>
-          </div>
+                <h2 className="mt-5 text-xl font-black text-gray-900 line-clamp-1">{idea.title}</h2>
+                <p className="mt-2 text-sm text-gray-500 line-clamp-2">{idea.description}</p>
 
-          {loading ? (
-            <div className="p-20 font-bold text-center text-gray-400">Loading your ideas...</div>
-          ) : myIdeas.length === 0 ? (
-            <div className="p-20 text-center">
-              <p className="mb-4 text-2xl font-bold text-gray-300">No ideas posted yet!</p>
-              <Link href="/ideas/create" className="font-black text-green-600 hover:underline">Start sharing now →</Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="text-xs font-black tracking-widest text-gray-400 uppercase bg-gray-50">
-                  <tr>
-                    <th className="px-8 py-4">Idea Title</th>
-                    <th className="px-8 py-4">Category</th>
-                    <th className="px-8 py-4 text-center">Votes</th>
-                    <th className="px-8 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {myIdeas.map((idea) => (
-                    <tr key={idea.id} className="transition-colors hover:bg-gray-50/50">
-                      <td className="px-8 py-6">
-                        <p className="font-bold text-gray-900">{idea.title}</p>
-                      </td>
-                      <td className="px-8 py-6">
-                        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-black uppercase">
-                          {idea.category}
-                        </span>
-                      </td>
-                      <td className="px-8 py-6 font-black text-center text-gray-700">
-                        {idea.voteCount || 0}
-                      </td>
-                      <td className="px-8 py-6 space-x-4 text-right">
-                        <Link 
-                          href={`/ideas/edit/${idea.id}`} 
-                          className="text-sm font-bold text-blue-600 hover:underline"
-                        >
-                          Edit
-                        </Link>
-                        <button 
-                          onClick={() => handleDelete(idea.id)}
-                          className="text-sm font-bold text-red-500 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                <div className="flex gap-3 mt-6">
+                  <Link
+                    href={`/ideas/${idea.id}`}
+                    className="flex-1 text-center py-3 text-[11px] font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
+                  >
+                    EDIT / VIEW
+                  </Link>
+
+                  <button
+                    onClick={() => handleDelete(idea.id)}
+                    className="flex-1 py-3 text-[11px] font-black text-white bg-rose-500 rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all"
+                  >
+                    DELETE
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
-
       <Footer />
     </div>
   );

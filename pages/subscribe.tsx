@@ -7,18 +7,27 @@ import API from "../utils/api";
 export default function Subscribe() {
   const [loading, setLoading] = useState(false);
 
-  const handleSubscription = async (plan: string, price: number) => {
+  const handleSubscription = async (planId: string, price: number) => {
     setLoading(true);
     try {
-      // ব্যাকএন্ডে পেমেন্ট ইনিশিয়েট করার রিকোয়েস্ট
-      const res = await API.post("/payments/init", { plan, price });
+      // ✅ ১. ব্যাকএন্ড রাউট অনুযায়ী সঠিক পাথ সেট করা হয়েছে: /payments/purchase-idea
+      const res = await API.post("/payments/purchase-idea", { 
+        ideaId: planId, // আপনার ডাটাবেসের আইডিটি এখানে পাঠানো হচ্ছে
+        price: price 
+      });
       
-      // SSLCommerz থেকে আসা গেটওয়ে লিঙ্কে রিডাইরেক্ট করা
-      if (res.data.gatewayUrl) {
-        window.location.href = res.data.gatewayUrl;
+      // ✅ ২. ব্যাকএন্ড রেসপন্স চেক এবং রিডাইরেক্ট
+      if (res.data?.success && res.data?.data) {
+        window.location.href = res.data.data; // SSLCommerz গেটওয়েতে পাঠিয়ে দিবে
+      } else {
+        alert("পেমেন্ট গেটওয়ে ইউআরএল পাওয়া যায়নি।");
       }
-    } catch (err) {
-      alert("পেমেন্ট গেটওয়ে লোড করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+
+    } catch (err: any) {
+      console.error("Payment Error:", err.response?.data || err.message);
+      // ব্যাকএন্ড থেকে আসা মেসেজ দেখানো (যেমন: 'Idea not found' অথবা 'Unauthorized')
+      const errorMessage = err.response?.data?.message || "পেমেন্ট গেটওয়ে লোড করতে সমস্যা হয়েছে।";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -71,12 +80,6 @@ export default function Subscribe() {
               <li className="flex items-center gap-3 text-sm font-bold text-gray-600">
                 <span className="text-green-500">✔</span> Vote on Projects
               </li>
-              <li className="flex items-center gap-3 text-sm italic font-bold text-gray-300">
-                <span className="text-gray-200">✕</span> Premium Blueprints
-              </li>
-              <li className="flex items-center gap-3 text-sm italic font-bold text-gray-300">
-                <span className="text-gray-200">✕</span> Direct Expert Chat
-              </li>
             </ul>
             <button className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 cursor-not-allowed rounded-2xl border border-gray-100">
               Current Plan
@@ -100,9 +103,6 @@ export default function Subscribe() {
             </div>
             <ul className="mb-10 space-y-4 text-left grow">
               <li className="flex items-center gap-3 text-sm font-bold text-gray-700">
-                <span className="font-black text-green-600">✔</span> All Free Features
-              </li>
-              <li className="flex items-center gap-3 text-sm font-bold text-gray-700">
                 <span className="font-black text-green-600">✔</span> Premium Idea Blueprints
               </li>
               <li className="flex items-center gap-3 text-sm font-bold text-gray-700">
@@ -113,7 +113,8 @@ export default function Subscribe() {
               </li>
             </ul>
             <button 
-              onClick={() => handleSubscription("PRO_MONTHLY", 499)}
+              // ✅ এখানে আপনার প্রোভাইড করা ডাটাবেস আইডিটি ব্যবহার করা হয়েছে
+              onClick={() => handleSubscription("87d52037-6ea1-4213-888f-67969891e454", 499)} 
               disabled={loading}
               className="w-full py-5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all bg-green-600 shadow-xl rounded-2xl shadow-green-200 hover:bg-green-700 active:scale-95 disabled:opacity-50"
             >
@@ -124,11 +125,11 @@ export default function Subscribe() {
         </div>
 
         <div className="flex items-center justify-center gap-4 mt-16 opacity-50">
-          <div className= "w-12 bg-gray-300 h-1px"></div>
+          <div className="w-12 h-px bg-gray-300"></div>
           <p className="text-[10px] font-black tracking-[0.3em] text-gray-400 uppercase">
             Secured by SSLCommerz
           </p>
-          <div className="w-12 bg-gray-300 h-1px"></div>
+          <div className="w-12 h-px bg-gray-300"></div>
         </div>
       </main>
 
