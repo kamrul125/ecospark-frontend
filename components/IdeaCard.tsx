@@ -1,72 +1,78 @@
 import React, { useState } from "react";
 import Link from "next/link";
-import API from "../utils/api"; 
+import { useRouter } from "next/router"; 
+import API from "../utils/api";
 
 interface IdeaProps {
   idea: any;
-  currentUser?: { id: string } | null;
+  // ✅ role প্রপার্টি অ্যাড করা হয়েছে
+  currentUser?: { id: string; name?: string; role?: string } | null;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
 const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const router = useRouter(); 
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [votes, setVotes] = useState(idea.voteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
+  const [isVoted, setIsVoted] = useState(false); 
 
-  const status = idea.status?.toUpperCase() || "DRAFT";
+  const [comments, setComments] = useState(idea.comments || []);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+
   const ideaId = idea.id;
 
-  // ✅ আপনার দেওয়া কমেন্ট সাবমিট ফাংশনটি এখানে থাকবে
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
-
     try {
       const token = typeof window !== "undefined" ? (localStorage.getItem("token") || localStorage.getItem("accessToken")) : null;
+      if (!token) return alert("লগইন করুন! 😊");
 
-      if (!token) {
-        alert("কমেন্ট করতে আগে লগইন করুন! 😊");
-        return;
-      }
-
-      await API.post(
-        `/ideas/${ideaId}/comments`, 
-        { text: commentText }, // আপনার ব্যাকএন্ডে 'content' চাইলে এখানে পরিবর্তন করবেন
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await API.post(
+        `/ideas/${ideaId}/comments`,
+        { text: commentText, parentId: replyToId || null },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("কমেন্ট সফলভাবে যোগ করা হয়েছে! ✅");
-      setCommentText("");
-      setShowCommentBox(false);
-      // এখানে আইডিয়া অবজেক্ট সরাসরি আপডেট করা কঠিন, তাই সফল হলে ইউজারকে মেসেজ দেখানোই ভালো
+      if (res.data?.success) {
+        const newComment = res.data.data;
+        setComments((prev: any[]) => [...prev, newComment]);
+        setCommentText("");
+        setReplyToId(null);
+      }
     } catch (err: any) {
-      console.error("Comment Error:", err.response?.data || err.message);
-      const errorMsg = err.response?.data?.message || "কমেন্ট যোগ করা যায়নি।";
-      alert(errorMsg);
+      alert(err.response?.data?.message || "ব্যর্থ হয়েছে।");
     }
   };
 
   const handleVote = async () => {
-    if (!currentUser) return alert("Please login to vote!");
+    if (!currentUser || isVoting) return;
     try {
       setIsVoting(true);
-      await API.post(`/ideas/${ideaId}/vote`); 
-      setVotes((prev: number) => prev + 1);
-    } catch (err) { alert("Error occurred."); }
-    finally { setIsVoting(false); }
+      await API.post(`/ideas/${ideaId}/vote`);
+      
+      if (isVoted) {
+        setVotes((prev: number) => prev - 1);
+        setIsVoted(false);
+      } else {
+        setVotes((prev: number) => prev + 1);
+        setIsVoted(true);
+      }
+    } catch (err) { 
+      alert("Error processing vote."); 
+    } finally { 
+      setIsVoting(false); 
+    }
   };
 
   return (
-    <div className="relative flex flex-col justify-between p-6 transition-all duration-500 bg-white border border-gray-100 shadow-sm rounded-[40px] hover:shadow-2xl group h-full">
-      
+    <div className="relative flex flex-col justify-between p-6 transition-all duration-500 bg-white border border-gray-100 shadow-sm rounded-3xl hover:shadow-2xl group h-fit">
       <div>
-        <div className="relative h-56 mb-5 overflow-hidden rounded-4xl bg-gray-50">
-          <img 
-            src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"} 
+        <div className="relative h-56 mb-5 overflow-hidden rounded-2xl bg-gray-50">
+          <img
+            src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"}
             className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
             alt={idea.title}
           />
@@ -77,69 +83,90 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
         </span>
 
         <h3 className="mb-2 text-xl font-black text-gray-900 line-clamp-1">{idea.title}</h3>
-
-        <div className="mb-6">
-          <p className={`text-sm text-gray-500 leading-relaxed ${!isExpanded ? "line-clamp-3" : ""}`}>
-            {idea.description}
-          </p>
-          {idea.description && idea.description.length > 100 && (
-            <button onClick={() => setIsExpanded(!isExpanded)} className="mt-2 text-[10px] font-black text-indigo-600 uppercase">
-              {isExpanded ? "Show Less ▲" : "Read More ▼"}
-            </button>
-          )}
-        </div>
+        <p className="mb-6 text-sm text-gray-500 leading-relaxed line-clamp-3">{idea.description}</p>
       </div>
 
       <div className="flex flex-col gap-4 pt-5 mt-auto border-t border-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* ভোট বাটন */}
-            <button onClick={handleVote} className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-white hover:bg-emerald-50 transition-all">
-              <div className="flex items-center justify-center w-8 h-8 shadow-lg bg-emerald-500 rounded-xl shadow-emerald-100">
-                 <span className="text-sm">🔥</span>
-              </div>
+            {/* Vote Button */}
+            <button 
+              onClick={handleVote} 
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl border transition-all shadow-sm ${isVoted ? 'bg-emerald-500 border-emerald-600' : 'bg-white border-gray-100 hover:bg-emerald-50'}`}
+            >
+              <div className={`flex items-center justify-center w-8 h-8 shadow-md rounded-xl font-bold text-[10px] ${isVoted ? 'bg-white text-emerald-500' : 'bg-emerald-500 text-white'}`}>🔥</div>
               <div className="flex flex-col items-start leading-none">
-                <span className="text-sm font-black text-gray-900">{votes}</span>
-                <span className="text-[8px] font-black text-gray-400 uppercase">Upvote</span>
+                <span className={`text-[10px] font-black uppercase tracking-tighter ${isVoted ? 'text-white' : 'text-emerald-600'}`}>Vote</span>
+                <span className={`text-sm font-black ${isVoted ? 'text-white' : 'text-gray-900'}`}>{votes}</span>
               </div>
             </button>
 
-            {/* কমেন্ট টগল বাটন */}
-            <button 
-              onClick={() => setShowCommentBox(!showCommentBox)}
-              className={`flex items-center justify-center w-12 h-12 rounded-2xl border transition-all ${showCommentBox ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-100 hover:bg-blue-50 text-gray-400'}`}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                setShowCommentBox(!showCommentBox);
+              }}
+              className={`flex items-center justify-center w-12 h-12 rounded-2xl border transition-all ${showCommentBox ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
             >
-              <div className="flex flex-col items-center">
-                <span className="text-lg">💬</span>
-                <span className="text-[9px] font-black">{idea.commentCount || 0}</span>
-              </div>
+              💬 <span className="ml-1 text-[10px] font-black">{comments.length}</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
-             {currentUser && idea.userId === currentUser.id && onEdit && status === "DRAFT" && (
-                <button onClick={() => onEdit(ideaId)} className="px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 rounded-xl">Edit</button>
-             )}
-             <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600">View</Link>
+            {/* ✅ এডিট বাটন: শুধু আইডিয়ার মালিকের জন্য */}
+            {currentUser && idea.userId === currentUser.id && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  router.push(`/ideas/${ideaId}?edit=true`);
+                }} 
+                className="px-4 py-2.5 text-[10px] font-black text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest shadow-sm border border-indigo-100"
+              >
+                Edit
+              </button>
+            )}
+
+            {/* ✅ ডিলিট বাটন: আইডিয়ার মালিক অথবা ADMIN হলে দেখাবে */}
+            {currentUser && (idea.userId === currentUser.id || currentUser.role === "ADMIN") && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (onDelete) onDelete(ideaId);
+                }} 
+                className="px-4 py-2.5 text-[10px] font-black text-rose-600 bg-rose-50 rounded-2xl hover:bg-rose-600 hover:text-white transition-all uppercase tracking-widest shadow-sm border border-rose-100"
+              >
+                Delete
+              </button>
+            )}
+
+            <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all shadow-md">
+              View
+            </Link>
           </div>
         </div>
 
-        {/* ইন-কার্ড কমেন্ট ইনপুট বক্স */}
         {showCommentBox && (
-          <div className="flex flex-col gap-2 mt-2">
-            <textarea
-              className="w-full p-3 text-xs border border-gray-200 bg-gray-50 rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Write a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              rows={2}
-            />
-            <button 
-              onClick={handleCommentSubmit}
-              className="self-end px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-700"
-            >
-              Post Comment
-            </button>
+          <div className="mt-4 space-y-4 border-t pt-4 border-gray-50">
+            <div className="pr-1 space-y-4 overflow-y-auto max-h-80 custom-scrollbar">
+              {comments.filter((c: any) => !c.parentId).length > 0 ? (
+                comments
+                  .filter((c: any) => !c.parentId)
+                  .map((mainComment: any) => (
+                    <div key={mainComment.id} className="flex flex-col gap-2 mb-2">
+                      <div className="p-4 bg-gray-50/50 border border-gray-100 rounded-3xl group/comment relative">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">{mainComment.user?.name || "Member"}</span>
+                        </div>
+                        <p className="text-[13px] text-gray-700 leading-relaxed font-medium">{mainComment.text || mainComment.content}</p>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <p className="text-[10px] text-center text-gray-400 font-bold italic py-4">No comments yet.</p>
+              )}
+            </div>
           </div>
         )}
       </div>
