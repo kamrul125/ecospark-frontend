@@ -10,6 +10,7 @@ interface Idea {
   description?: string;
   image?: string;
   voteCount?: number;
+  isExpanded?: boolean; // নতুন স্টেট যোগ করা হয়েছে
 }
 
 export default function MemberDashboard() {
@@ -17,119 +18,104 @@ export default function MemberDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Fetch Ideas
   const fetchIdeas = async () => {
     setLoading(true);
     setError(null);
     try {
-      // ✅ Backend route এর সাথে match করা
-      const res = await API.get("/ideas"); // "my-ideas" না, backend অনুযায়ী
-      const rawData = res.data?.data || res.data?.result || res.data || [];
-      const finalData: Idea[] = Array.isArray(rawData) ? rawData : rawData ? [rawData] : [];
-      setIdeas(finalData);
-      console.log("Dashboard Data Loaded:", finalData);
+      const token = typeof window !== "undefined" ? (localStorage.getItem("token") || localStorage.getItem("accessToken")) : null;
+      const res = await API.get("/ideas/my-ideas", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const finalData = res.data?.data || [];
+      
+      // ডাটা আসার সময় প্রতিটি আইডিয়াতে isExpanded: false সেট করে দিচ্ছি
+      const processedData = (Array.isArray(finalData) ? finalData : []).map((item: Idea) => ({
+        ...item,
+        isExpanded: false
+      }));
+
+      setIdeas(processedData);
     } catch (err: any) {
-      console.error("Fetch error:", err);
-      setIdeas([]);
-      setError("Failed to load your ideas. Please try again.");
+      const errorMessage = err.response?.data?.message || "Failed to load your ideas.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchIdeas();
-  }, []);
+  useEffect(() => { fetchIdeas(); }, []);
 
-  // ✅ Handle Delete
+  // See More টগল করার ফাংশন
+  const toggleExpand = (id: string) => {
+    setIdeas((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, isExpanded: !i.isExpanded } : i))
+    );
+  };
+
   const handleDelete = async (id: string) => {
-    if (!id) return alert("Error: Idea ID not found.");
-
-    if (!confirm("Are you sure you want to delete this idea?")) return;
-
+    if (!confirm("Are you sure?")) return;
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
-
       await API.delete(`/ideas/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // UI থেকে সাথে সাথে রিমুভ করা
       setIdeas((prev) => prev.filter((i) => i.id !== id));
-      alert("✅ Successfully deleted!");
+      alert("✅ Deleted!");
     } catch (err: any) {
-      console.error("Delete failed:", err.response?.data);
-      alert(err.response?.data?.message || "Failed to delete idea.");
+      alert("Failed to delete.");
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
       <main className="w-full max-w-6xl px-6 py-10 mx-auto grow">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-black text-gray-900">
-            My Dashboard <span className="text-green-600">({ideas.length})</span>
-          </h1>
-          <Link
-            href="/ideas/create"
-            className="px-6 py-3 font-bold text-white bg-green-600 rounded-2xl hover:bg-green-700 transition-all"
-          >
-            + New Idea
-          </Link>
+          <h1 className="text-3xl font-black text-gray-900">My Dashboard</h1>
+          <Link href="/ideas/create" className="px-6 py-3 font-bold text-white bg-green-600 rounded-2xl">+ New Idea</Link>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-            <p className="mt-4 font-bold text-gray-500">Loading your ideas...</p>
-          </div>
-        ) : error ? (
-          <div className="p-20 text-center bg-white shadow-sm rounded-[40px] border border-dashed border-gray-300">
-            <p className="text-xl font-bold text-red-500">{error}</p>
-          </div>
-        ) : ideas.length === 0 ? (
-          <div className="p-20 text-center bg-white shadow-sm rounded-[40px] border border-dashed border-gray-300">
-            <p className="text-xl font-bold text-gray-400">You haven't shared any ideas yet.</p>
-            <Link
-              href="/ideas/create"
-              className="inline-block mt-4 text-green-600 font-black hover:underline"
-            >
-              Start sharing now 🚀
-            </Link>
-          </div>
+          <div className="py-20 text-center">Loading...</div>
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {ideas.map((idea, index) => (
-              <div
-                key={idea.id || `idea-${index}`}
-                className="group p-5 bg-white border border-gray-100 shadow-xl rounded-4xl hover:shadow-2xl transition-all duration-300"
-              >
-                <div className="relative overflow-hidden rounded-2xl">
-                  <img
-                    src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"}
-                    className="object-cover w-full h-48 group-hover:scale-110 transition-transform duration-500"
-                    alt={idea.title || "Idea Image"}
+            {ideas.map((idea) => (
+              <div key={idea.id} className="flex flex-col justify-between p-5 bg-white border border-gray-100 shadow-xl rounded-4xl">
+                <div>
+                  <img 
+                    src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"} 
+                    className="object-cover w-full h-48 rounded-2xl" 
+                    alt={idea.title} 
                   />
-                  <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black text-green-700 shadow-sm">
-                    🔥 {idea.voteCount || 0} Votes
+                  <h2 className="mt-5 text-xl font-black text-gray-900">{idea.title}</h2>
+                  
+                  {/* ডেসক্রিপশন সেকশন উইথ See More */}
+                  <div className="mt-2">
+                    <p className={`text-sm text-gray-500 leading-relaxed ${!idea.isExpanded ? "line-clamp-3" : ""}`}>
+                      {idea.description || "No description provided."}
+                    </p>
+                    
+                    {idea.description && idea.description.length > 80 && (
+                      <button 
+                        onClick={() => toggleExpand(idea.id)}
+                        className="text-[11px] font-black text-indigo-600 mt-2 uppercase hover:underline cursor-pointer"
+                      >
+                        {idea.isExpanded ? "Show Less ▲" : "See More ▼"}
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                <h2 className="mt-5 text-xl font-black text-gray-900 line-clamp-1">{idea.title}</h2>
-                <p className="mt-2 text-sm text-gray-500 line-clamp-2">{idea.description}</p>
-
+                
                 <div className="flex gap-3 mt-6">
                   <Link
                     href={`/ideas/${idea.id}`}
-                    className="flex-1 text-center py-3 text-[11px] font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all"
+                    className="flex-1 text-center py-3 text-[11px] font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all"
                   >
-                    EDIT / VIEW
+                    EDIT IDEA
                   </Link>
-
-                  <button
-                    onClick={() => handleDelete(idea.id)}
-                    className="flex-1 py-3 text-[11px] font-black text-white bg-rose-500 rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all"
+                  <button 
+                    onClick={() => handleDelete(idea.id)} 
+                    className="flex-1 py-3 text-[11px] font-black text-white bg-rose-500 rounded-xl hover:bg-rose-600 transition-all"
                   >
                     DELETE
                   </button>

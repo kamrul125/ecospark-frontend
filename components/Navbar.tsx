@@ -9,22 +9,21 @@ export default function Navbar() {
     // উইন্ডো চেক (Next.js এর জন্য নিরাপদ)
     if (typeof window !== "undefined") {
       try {
-        const storedToken = localStorage.getItem("token");
+        // token এবং accessToken দুইটাই চেক করা হচ্ছে সেফটির জন্য
+        const storedToken = localStorage.getItem("token") || localStorage.getItem("accessToken");
         setToken(storedToken);
 
         const userData = localStorage.getItem("user");
         if (userData) {
           const user = JSON.parse(userData);
 
-          // 🛠️ Safety Check: যদি ইউজার ডাটা ভুল করে অবজেক্ট হিসেবে রেন্ডার হওয়ার চেষ্টা করে
-          // আপনার ডাটাবেসে role যদি স্ট্রিং হয় তবে এভাবে চেক করুন
-          if (user && typeof user === "object" && user.role === "PRO") {
+          // ইউজার যদি PRO মেম্বার হয়
+          if (user && typeof user === "object" && (user.role === "PRO" || user.isPaid)) {
             setIsPro(true);
           }
         }
       } catch (error) {
-        console.error("User data parsing failed, clearing corrupted data:", error);
-        // যদি ডাটা করাপ্ট থাকে, তবে লোকাল স্টোরেজ পরিষ্কার করে দেওয়া ভালো
+        console.error("User data parsing failed:", error);
         localStorage.removeItem("user");
       }
     }
@@ -32,9 +31,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("accessToken");
+      localStorage.clear(); // সব ডাটা ক্লিন করে লগআউট
       window.location.href = "/auth/login";
     }
   };
@@ -60,7 +57,8 @@ export default function Navbar() {
 
             {token && (
               <>
-                <Link href="/ideas/create" className="transition-colors hover:text-green-200">
+                {/* ✅ আপডেট: এখন সরাসরি /create-idea পাথে যাবে যা কনফ্লিক্ট কমাবে */}
+                <Link href="/create-idea" className="transition-colors hover:text-green-200">
                   Create Idea
                 </Link>
                 <Link href="/dashboard/member" className="transition-colors hover:text-green-200">
