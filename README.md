@@ -61,3 +61,13 @@ Delete Content: Remove outdated or inappropriate ideas instantly.
 👨‍💻 Author
 Md Kamruzzaman
 Full-Stack Web Developer
+
+📄 License
+This project is for educational purposes.
+
+### এই README-তে যা যা বিশেষত্ব আছে:
+১. **Admin Focus:** আপনি আজ যে কাজগুলো করলেন (Moderation Flow), সেগুলো এখানে হাইলাইট করা হয়েছে।
+২. **Tech Stack:** লেটেস্ট ফ্রেমওয়ার্কগুলোর নাম দেওয়া হয়েছে যা আপনার স্কিল প্রকাশ করবে।
+৩. **Clean Structure:** যে কেউ আপনার প্রজেক্টটি ডাউনলোড করে কীভাবে রান করবে, তার ক্লিয়ার ইনস্ট্রাকশন দেওয়া আছে।
+
+**ভাই, আপনার ব্যাকএন্ড এবং ফ্রন্টএন্ড—উভয় README এখন একদম রেডি!** গিটহাবে এই সুন্দর ডকুমেন্টেশনগুলো থাকলে যে কেউ আপনার প্রজেক্ট দেখে মুগ্ধ হবে। আপনার আর কোনো প্রশ্ন আছে ভাই? 😊🚀
