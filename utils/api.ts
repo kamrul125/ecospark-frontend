@@ -1,53 +1,72 @@
 import axios from "axios";
 
+// ✅ Base URL (production + local support)
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://backend-eco-spark1.vercel.app/api/v1";
+
 const API = axios.create({
-  // ✅ আপনার নতুন ভেরসেল ব্যাকএন্ড ইউআরএল আপডেট করা হয়েছে
-  baseURL: "https://backend-eco-spark1.vercel.app/api/v1", 
-  timeout: 20000, 
-  withCredentials: true, // প্রোডাকশনে কুকি এবং অথরাইজেশনের জন্য জরুরি
+  baseURL: BASE_URL,
+  timeout: 20000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   },
 });
 
-// ✅ ১. রিকোয়েস্ট ইন্টারসেপ্টর: প্রতিবার রিকোয়েস্ট পাঠানোর আগে টোকেন চেক করবে
+// ✅ Request Interceptor (Attach Token)
 API.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
-      
+      const token =
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("token");
+
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// ✅ ২. রেসপন্স ইন্টারসেপ্টর: সার্ভার থেকে আসা এররগুলো হ্যান্ডেল করবে
+// ✅ Response Interceptor (Better Error Handling)
 API.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
+    // 🔴 Server responded with error
     if (error.response) {
-      // সার্ভার থেকে আসা এরর মেসেজ
-      console.error("Server Error Response:", error.response.data);
-      
-      if (error.response.status === 401) {
-        console.warn("Unauthorized! Logging out...");
+      const { status, data } = error.response;
+
+      console.error("❌ Server Error:", data?.message || data);
+
+      // 🔐 Unauthorized
+      if (status === 401) {
+        console.warn("⚠️ Unauthorized! Clearing session...");
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("accessToken");
+          // optional redirect
+          // window.location.href = "/login";
+        }
       }
-    } else if (error.request) {
-      // নেটওয়ার্ক বা কানেকশন এরর
-      console.error("Network Error: Backend is not responding at https://backend-eco-spark1.vercel.app/");
-    } else {
-      console.error("Error Message:", error.message);
     }
-    
+
+    // 🔴 No response (Network / backend crash)
+    else if (error.request) {
+      console.error(
+        "❌ Network Error: Backend not responding or crashed"
+      );
+    }
+
+    // 🔴 Other error
+    else {
+      console.error("❌ Error:", error.message);
+    }
+
     return Promise.reject(error);
   }
 );
