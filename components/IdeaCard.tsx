@@ -165,12 +165,12 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
         {/* কমেন্ট বক্স সেকশন */}
         {showCommentBox && (
-          <div className="mt-4 space-y-4 border-t pt-4">
-            <div className="space-y-4 overflow-y-auto max-h-80 custom-scrollbar pr-1">
+          <div className="pt-4 mt-4 space-y-4 border-t">
+            <div className="pr-1 space-y-4 overflow-y-auto max-h-80 custom-scrollbar">
               {comments.filter((c: any) => !c.parentId).map((mainComment: any) => (
                 <div key={mainComment.id} className="flex flex-col gap-2 mb-4">
                   {/* মেইন কমেন্ট */}
-                  <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="p-4 border border-gray-100 bg-gray-50 rounded-2xl">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-black text-indigo-600 uppercase">{mainComment.user?.name}</span>
                       <div className="flex gap-2">
@@ -188,7 +188,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
                   {/* রিপ্লাই লিস্ট */}
                   {mainComment.replies?.map((reply: any) => (
-                    <div key={reply.id} className="ml-8 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between items-start">
+                    <div key={reply.id} className="flex items-start justify-between p-3 ml-8 border border-indigo-100 bg-indigo-50/50 rounded-xl">
                       <div className="flex-1">
                         <span className="text-[9px] font-black text-emerald-600 block">{reply.user?.name}</span>
                         <p className="text-[12px] text-gray-700">{reply.content}</p>
@@ -206,13 +206,13 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
             </div>
 
             {/* কমেন্ট/রিপ্লাই/এডিট ইনপুট বক্স */}
-            <div className="flex flex-col gap-2 bg-gray-100 p-3 rounded-2xl shadow-inner">
+            <div className="flex flex-col gap-2 p-3 bg-gray-100 shadow-inner rounded-2xl">
               {(replyingUserName || editingCommentId) && (
                 <div className="flex items-center justify-between px-3 py-1 bg-indigo-100 rounded-lg">
                   <span className="text-[10px] font-bold text-indigo-700">
                     {editingCommentId ? "Editing your comment..." : `Replying to ${replyingUserName}`}
                   </span>
-                  <button onClick={() => { setReplyToId(null); setEditingCommentId(null); setCommentText(""); setReplyingUserName(null); }} className="text-xs text-rose-500 font-black hover:scale-110 transition-transform">✕</button>
+                  <button onClick={() => { setReplyToId(null); setEditingCommentId(null); setCommentText(""); setReplyingUserName(null); }} className="text-xs font-black transition-transform text-rose-500 hover:scale-110">✕</button>
                 </div>
               )}
               <div className="flex gap-2">
@@ -221,11 +221,11 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                   value={commentText} 
                   onChange={(e) => setCommentText(e.target.value)} 
                   placeholder="আপনার মতামত লিখুন..." 
-                  className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black shadow-sm" 
+                  className="flex-1 px-4 py-2 text-sm text-black bg-white border border-gray-200 shadow-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" 
                 />
                 <button 
                   onClick={handleCommentSubmit} 
-                  className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                  className="px-5 py-2 text-xs font-black text-white transition-all bg-indigo-600 shadow-md rounded-xl hover:bg-indigo-700 active:scale-95"
                 >
                   {editingCommentId ? "UPDATE" : replyToId ? "REPLY" : "POST"}
                 </button>

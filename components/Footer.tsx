@@ -9,7 +9,7 @@ export default function Footer() {
             🌱 <span className="text-white">EcoSpark</span><span className="text-green-500">Hub</span>
           </h2>
           <p className="max-w-xs text-sm font-medium leading-relaxed text-gray-400">
-            একটি টেকসই ভবিষ্যৎ গড়ার লক্ষ্যে পরিবেশবান্ধব আইডিয়া শেয়ার করার আধুনিক প্ল্যাটফর্ম। 🌍
+           
           </p>
           <div className="flex gap-4 pt-2">
             {/* Social icons Placeholder */}
