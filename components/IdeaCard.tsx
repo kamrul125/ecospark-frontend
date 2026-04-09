@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router"; 
 import API from "../utils/api";
@@ -15,10 +15,12 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [commentText, setCommentText] = useState("");
   
+  // ✅ ভোট স্টেট
   const [votes, setVotes] = useState(idea.voteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
   const [isVoted, setIsVoted] = useState(false); 
 
+  // ✅ কমেন্ট স্টেট
   const [comments, setComments] = useState(idea.comments || []);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyingUserName, setReplyingUserName] = useState<string | null>(null);
@@ -26,6 +28,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
   const ideaId = idea.id;
 
+  // ✅ ভোট হ্যান্ডেল
   const handleVote = async () => {
     if (!currentUser || isVoting) return;
     try {
@@ -47,6 +50,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     }
   };
 
+  // ✅ কমেন্ট সাবমিট/আপডেট হ্যান্ডেল
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
@@ -54,6 +58,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       if (!token) return alert("লগইন করুন! 😊");
 
       if (editingCommentId) {
+        // Edit Logic
         const res = await API.patch(`/comments/${editingCommentId}`, 
           { content: commentText },
           { headers: { Authorization: `Bearer ${token}` } }
@@ -78,6 +83,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
           setEditingCommentId(null);
         }
       } else {
+        // Post New Comment or Reply
         const res = await API.post(`/ideas/${ideaId}/comments`,
           { content: commentText, parentId: replyToId || null },
           { headers: { Authorization: `Bearer ${token}` } }
@@ -104,6 +110,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     }
   };
 
+  // ✅ কমেন্ট ডিলিট হ্যান্ডেল
   const handleDeleteComment = async (commentId: string, isReply: boolean, parentId?: string) => {
     if (!confirm("আপনি কি নিশ্চিত?")) return;
     try {
@@ -126,16 +133,17 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     <div className="relative flex flex-col justify-between p-6 transition-all duration-500 bg-white border border-gray-100 shadow-sm rounded-3xl hover:shadow-2xl h-fit">
       <div>
         <div className="relative h-56 mb-5 overflow-hidden rounded-2xl bg-gray-50">
-          <img src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"} className="object-cover w-full h-full" alt="" />
+          <img src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"} className="object-cover w-full h-full" alt={idea.title} />
         </div>
         <h3 className="mb-2 text-xl font-black text-gray-900 line-clamp-1">{idea.title}</h3>
         <p className="mb-6 text-sm text-gray-500 line-clamp-3">{idea.description}</p>
       </div>
 
+      {/* অ্যাকশন বাটনস */}
       <div className="flex flex-col gap-4 pt-5 mt-auto border-t border-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* ✅ এখানে VOTE লেখা যোগ করা হয়েছে */}
+            {/* ✅ Vote Button with Text */}
             <button 
               onClick={handleVote} 
               className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all ${isVoted ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-gray-100 text-gray-900 hover:bg-gray-50'}`}
@@ -144,9 +152,10 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
               <span className="text-sm font-black">{votes}</span>
             </button>
 
+            {/* Comment Toggle Button */}
             <button 
               onClick={() => setShowCommentBox(!showCommentBox)} 
-              className={`flex items-center justify-center w-12 h-12 rounded-2xl border ${showCommentBox ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+              className={`flex items-center justify-center w-12 h-12 rounded-2xl border transition-all ${showCommentBox ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-400 hover:text-indigo-600'}`}
             >
               💬 <span className="ml-1 text-[10px] font-black">{comments.length}</span>
             </button>
@@ -154,37 +163,40 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
           <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all">View</Link>
         </div>
 
+        {/* কমেন্ট বক্স সেকশন */}
         {showCommentBox && (
           <div className="mt-4 space-y-4 border-t pt-4">
-            <div className="space-y-4 overflow-y-auto max-h-80 custom-scrollbar">
+            <div className="space-y-4 overflow-y-auto max-h-80 custom-scrollbar pr-1">
               {comments.filter((c: any) => !c.parentId).map((mainComment: any) => (
                 <div key={mainComment.id} className="flex flex-col gap-2 mb-4">
+                  {/* মেইন কমেন্ট */}
                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-black text-indigo-600 uppercase">{mainComment.user?.name}</span>
                       <div className="flex gap-2">
                         {(currentUser?.id === mainComment.userId || currentUser?.role === 'ADMIN') && (
                           <>
-                            <button onClick={() => { setEditingCommentId(mainComment.id); setCommentText(mainComment.content); }} className="text-[9px] font-bold text-gray-500">EDIT</button>
-                            <button onClick={() => handleDeleteComment(mainComment.id, false)} className="text-[9px] font-bold text-rose-500">DELETE</button>
+                            <button onClick={() => { setEditingCommentId(mainComment.id); setCommentText(mainComment.content); }} className="text-[9px] font-bold text-gray-500 hover:text-indigo-600 transition-colors">EDIT</button>
+                            <button onClick={() => handleDeleteComment(mainComment.id, false)} className="text-[9px] font-bold text-rose-500 hover:text-rose-700 transition-colors">DELETE</button>
                           </>
                         )}
-                        <button onClick={() => { setReplyToId(mainComment.id); setReplyingUserName(mainComment.user?.name); }} className="text-[10px] font-black text-blue-700 bg-blue-100 px-2 py-1 rounded-lg">REPLY</button>
+                        <button onClick={() => { setReplyToId(mainComment.id); setReplyingUserName(mainComment.user?.name); setEditingCommentId(null); }} className="text-[10px] font-black text-blue-700 bg-blue-100 px-2 py-1 rounded-lg hover:bg-blue-200 transition-all">REPLY</button>
                       </div>
                     </div>
                     <p className="text-[13px] text-gray-800 font-medium">{mainComment.content}</p>
                   </div>
 
+                  {/* রিপ্লাই লিস্ট */}
                   {mainComment.replies?.map((reply: any) => (
-                    <div key={reply.id} className="ml-8 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between">
+                    <div key={reply.id} className="ml-8 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between items-start">
                       <div className="flex-1">
                         <span className="text-[9px] font-black text-emerald-600 block">{reply.user?.name}</span>
                         <p className="text-[12px] text-gray-700">{reply.content}</p>
                       </div>
                       {(currentUser?.id === reply.userId || currentUser?.role === 'ADMIN') && (
                         <div className="flex gap-2 ml-2">
-                          <button onClick={() => { setEditingCommentId(reply.id); setCommentText(reply.content); }} className="text-[9px] font-bold text-gray-400">EDIT</button>
-                          <button onClick={() => handleDeleteComment(reply.id, true, mainComment.id)} className="text-[9px] font-bold text-rose-400">🗑️</button>
+                          <button onClick={() => { setEditingCommentId(reply.id); setCommentText(reply.content); }} className="text-[9px] font-bold text-gray-400 hover:text-indigo-600">EDIT</button>
+                          <button onClick={() => handleDeleteComment(reply.id, true, mainComment.id)} className="text-[9px] font-bold text-rose-400 hover:text-rose-600">🗑️</button>
                         </div>
                       )}
                     </div>
@@ -193,18 +205,28 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
               ))}
             </div>
 
-            <div className="flex flex-col gap-2 bg-gray-100 p-3 rounded-2xl">
+            {/* কমেন্ট/রিপ্লাই/এডিট ইনপুট বক্স */}
+            <div className="flex flex-col gap-2 bg-gray-100 p-3 rounded-2xl shadow-inner">
               {(replyingUserName || editingCommentId) && (
                 <div className="flex items-center justify-between px-3 py-1 bg-indigo-100 rounded-lg">
                   <span className="text-[10px] font-bold text-indigo-700">
-                    {editingCommentId ? "Editing comment..." : `Replying to ${replyingUserName}`}
+                    {editingCommentId ? "Editing your comment..." : `Replying to ${replyingUserName}`}
                   </span>
-                  <button onClick={() => { setReplyToId(null); setEditingCommentId(null); setCommentText(""); setReplyingUserName(null); }} className="text-xs text-rose-500 font-black">✕</button>
+                  <button onClick={() => { setReplyToId(null); setEditingCommentId(null); setCommentText(""); setReplyingUserName(null); }} className="text-xs text-rose-500 font-black hover:scale-110 transition-transform">✕</button>
                 </div>
               )}
               <div className="flex gap-2">
-                <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="লিখুন..." className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none text-black" />
-                <button onClick={handleCommentSubmit} className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700">
+                <input 
+                  type="text" 
+                  value={commentText} 
+                  onChange={(e) => setCommentText(e.target.value)} 
+                  placeholder="আপনার মতামত লিখুন..." 
+                  className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black shadow-sm" 
+                />
+                <button 
+                  onClick={handleCommentSubmit} 
+                  className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                >
                   {editingCommentId ? "UPDATE" : replyToId ? "REPLY" : "POST"}
                 </button>
               </div>
