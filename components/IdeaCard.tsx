@@ -14,6 +14,8 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
   const router = useRouter(); 
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [commentText, setCommentText] = useState("");
+  
+  // ✅ ভোটের জন্য স্টেটগুলো আবার যোগ করা হলো
   const [votes, setVotes] = useState(idea.voteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
   const [isVoted, setIsVoted] = useState(false); 
@@ -21,11 +23,31 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
   const [comments, setComments] = useState(idea.comments || []);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyingUserName, setReplyingUserName] = useState<string | null>(null);
-  
-  // ✅ এডিট করার জন্য নতুন স্টেট
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
 
   const ideaId = idea.id;
+
+  // ✅ ভোট হ্যান্ডেল করার ফাংশন
+  const handleVote = async () => {
+    if (!currentUser || isVoting) return;
+    try {
+      setIsVoting(true);
+      const res = await API.post(`/ideas/${ideaId}/vote`);
+      if (res.data?.success) {
+        if (isVoted) {
+          setVotes((prev: number) => prev - 1);
+          setIsVoted(false);
+        } else {
+          setVotes((prev: number) => prev + 1);
+          setIsVoted(true);
+        }
+      }
+    } catch (err) { 
+      console.error("Vote failed", err);
+    } finally { 
+      setIsVoting(false); 
+    }
+  };
 
   // ✅ কমেন্ট সাবমিট বা আপডেট করার ফাংশন
   const handleCommentSubmit = async () => {
@@ -35,7 +57,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       if (!token) return alert("লগইন করুন! 😊");
 
       if (editingCommentId) {
-        // এডিট লজিক (PATCH/PUT)
         const res = await API.patch(`/comments/${editingCommentId}`, 
           { content: commentText },
           { headers: { Authorization: `Bearer ${token}` } }
@@ -60,7 +81,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
           setEditingCommentId(null);
         }
       } else {
-        // নতুন কমেন্ট বা রিপ্লাই লজিক
         const res = await API.post(`/ideas/${ideaId}/comments`,
           { content: commentText, parentId: replyToId || null },
           { headers: { Authorization: `Bearer ${token}` } }
@@ -79,7 +99,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
           }
         }
       }
-
       setCommentText("");
       setReplyToId(null);
       setReplyingUserName(null);
@@ -104,12 +123,11 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       } else {
         setComments((prev: any[]) => prev.filter((c) => c.id !== commentId));
       }
-    } catch (err: any) { alert("ডিলিট করা যায়নি।"); }
+    } catch (err: any) { alert("ডিলিট করা যায়নি।"); }
   };
 
   return (
     <div className="relative flex flex-col justify-between p-6 transition-all duration-500 bg-white border border-gray-100 shadow-sm rounded-3xl hover:shadow-2xl h-fit">
-      {/* কন্টেক্সট অংশ */}
       <div>
         <div className="relative h-56 mb-5 overflow-hidden rounded-2xl bg-gray-50">
           <img src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"} className="object-cover w-full h-full" alt="" />
@@ -121,11 +139,22 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       <div className="flex flex-col gap-4 pt-5 mt-auto border-t border-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowCommentBox(!showCommentBox)} className={`flex items-center justify-center w-12 h-12 rounded-2xl border ${showCommentBox ? 'bg-indigo-600 text-white' : 'bg-gray-50'}`}>
+            {/* ✅ ভোট বাটন আবার যোগ করা হলো */}
+            <button 
+              onClick={handleVote} 
+              className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all ${isVoted ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-gray-100 text-gray-900 hover:bg-gray-50'}`}
+            >
+              🔥 <span className="text-sm font-black">{votes}</span>
+            </button>
+
+            <button 
+              onClick={() => setShowCommentBox(!showCommentBox)} 
+              className={`flex items-center justify-center w-12 h-12 rounded-2xl border ${showCommentBox ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+            >
               💬 <span className="ml-1 text-[10px] font-black">{comments.length}</span>
             </button>
           </div>
-          <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl">View</Link>
+          <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all">View</Link>
         </div>
 
         {showCommentBox && (
@@ -137,7 +166,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-black text-indigo-600 uppercase">{mainComment.user?.name}</span>
                       <div className="flex gap-2">
-                        {/* ✅ এডিট এবং ডিলিট বাটন */}
                         {(currentUser?.id === mainComment.userId || currentUser?.role === 'ADMIN') && (
                           <>
                             <button onClick={() => { setEditingCommentId(mainComment.id); setCommentText(mainComment.content); }} className="text-[9px] font-bold text-gray-500">EDIT</button>
@@ -150,7 +178,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                     <p className="text-[13px] text-gray-800 font-medium">{mainComment.content}</p>
                   </div>
 
-                  {/* রিপ্লাই লিস্ট */}
                   {mainComment.replies?.map((reply: any) => (
                     <div key={reply.id} className="ml-8 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between">
                       <div className="flex-1">
@@ -169,7 +196,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
               ))}
             </div>
 
-            {/* ইনপুট বক্স */}
             <div className="flex flex-col gap-2 bg-gray-100 p-3 rounded-2xl">
               {(replyingUserName || editingCommentId) && (
                 <div className="flex items-center justify-between px-3 py-1 bg-indigo-100 rounded-lg">
@@ -181,7 +207,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
               )}
               <div className="flex gap-2">
                 <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="লিখুন..." className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none text-black" />
-                <button onClick={handleCommentSubmit} className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl">
+                <button onClick={handleCommentSubmit} className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700">
                   {editingCommentId ? "UPDATE" : replyToId ? "REPLY" : "POST"}
                 </button>
               </div>
