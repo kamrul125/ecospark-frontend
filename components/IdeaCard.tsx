@@ -18,18 +18,19 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
   const [isVoting, setIsVoting] = useState(false);
   const [isVoted, setIsVoted] = useState(false); 
 
+  // ডাটাবেজ থেকে আসা comments যদি idea.comments এ থাকে তবে সেটা নিবে
   const [comments, setComments] = useState(idea.comments || []);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyingUserName, setReplyingUserName] = useState<string | null>(null);
 
   const ideaId = idea.id;
 
-  // 👉 কনসোলে ডাটা চেক করার জন্য useEffect
+  // কনসোলে চেক করার জন্য
   useEffect(() => {
     if (showCommentBox) {
-      console.log("All Comments Data for Idea:", ideaId, comments);
+      console.log("Current Comments State:", comments);
     }
-  }, [comments, showCommentBox, ideaId]);
+  }, [comments, showCommentBox]);
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
@@ -79,108 +80,95 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
         setVotes((prev: number) => prev + 1);
         setIsVoted(true);
       }
-    } catch (err) { 
-      alert("Error processing vote."); 
-    } finally { setIsVoting(false); }
+    } catch (err) { alert("Error."); } finally { setIsVoting(false); }
   };
 
   return (
     <div className="relative flex flex-col justify-between p-6 transition-all duration-500 bg-white border border-gray-100 shadow-sm rounded-3xl hover:shadow-2xl group h-fit">
+      {/* ক্যাটাগরি এবং টাইটেল অংশ */}
       <div>
         <div className="relative h-56 mb-5 overflow-hidden rounded-2xl bg-gray-50">
           <img
             src={idea.image || "https://images.unsplash.com/photo-1470115636492-6d2b56f9146d"}
-            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+            className="object-cover w-full h-full"
             alt={idea.title}
           />
         </div>
-
-        <span className="inline-block px-4 py-1.5 mb-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 rounded-full border border-emerald-100">
+        <span className="inline-block px-4 py-1.5 mb-3 text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 rounded-full">
           {typeof idea.category === "string" ? idea.category : idea.category?.name || "Concept"}
         </span>
-
         <h3 className="mb-2 text-xl font-black text-gray-900 line-clamp-1">{idea.title}</h3>
-        <p className="mb-6 text-sm text-gray-500 leading-relaxed line-clamp-3">{idea.description}</p>
+        <p className="mb-6 text-sm text-gray-500 line-clamp-3">{idea.description}</p>
       </div>
 
+      {/* নিচের বাটনগুলো */}
       <div className="flex flex-col gap-4 pt-5 mt-auto border-t border-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={handleVote} 
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl border transition-all shadow-sm ${isVoted ? 'bg-emerald-500 border-emerald-600' : 'bg-white border-gray-100 hover:bg-emerald-50'}`}
-            >
-              <div className={`flex items-center justify-center w-8 h-8 shadow-md rounded-xl font-bold text-[10px] ${isVoted ? 'bg-white text-emerald-500' : 'bg-emerald-500 text-white'}`}>🔥</div>
-              <div className="flex flex-col items-start leading-none">
-                <span className={`text-[10px] font-black uppercase tracking-tighter ${isVoted ? 'text-white' : 'text-emerald-600'}`}>Vote</span>
-                <span className={`text-sm font-black ${isVoted ? 'text-white' : 'text-gray-900'}`}>{votes}</span>
-              </div>
+            <button onClick={handleVote} className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all ${isVoted ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-gray-100 text-gray-900'}`}>
+              🔥 <span className="text-sm font-black">{votes}</span>
             </button>
 
+            {/* কমেন্ট বাটন - এখানে ক্লিক করলেই বক্স খুলবে */}
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                setShowCommentBox(!showCommentBox);
-              }}
-              className={`flex items-center justify-center w-12 h-12 rounded-2xl border transition-all ${showCommentBox ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+              onClick={() => setShowCommentBox(!showCommentBox)}
+              className={`flex items-center justify-center w-12 h-12 rounded-2xl border transition-all ${showCommentBox ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
             >
               💬 <span className="ml-1 text-[10px] font-black">{comments.length}</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
-            {currentUser && idea.userId === currentUser.id && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  router.push(`/ideas/${ideaId}?edit=true`);
-                }} 
-                className="px-4 py-2.5 text-[10px] font-black text-indigo-600 bg-indigo-50 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest shadow-sm border border-indigo-100"
-              >
-                Edit
-              </button>
-            )}
-            <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all shadow-md">
+            <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all">
               View
             </Link>
           </div>
         </div>
 
+        {/* কমেন্ট বক্স অংশ */}
         {showCommentBox && (
           <div className="mt-4 space-y-4 border-t pt-4 border-gray-50">
-            <div className="pr-1 space-y-4 overflow-y-auto max-h-80 custom-scrollbar">
-              {/* মেইন কমেন্ট ফিল্টার (যাদের parentId নেই) */}
-              {comments.filter((c: any) => !c.parentId).length > 0 ? (
+            <div className="pr-1 space-y-4 overflow-y-auto max-h-80">
+              {comments.length > 0 ? (
                 comments
                   .filter((c: any) => !c.parentId)
                   .map((mainComment: any) => (
                     <div key={mainComment.id} className="flex flex-col gap-2 mb-4">
-                      <div className="p-4 bg-gray-50/50 border border-gray-100 rounded-3xl relative">
+                      {/* মেইন কমেন্ট কার্ড */}
+                      <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
                         <div className="flex items-center justify-between w-full mb-1">
-                          <span className="text-[10px] font-black text-indigo-600 uppercase flex-1">{mainComment.user?.name || "Member"}</span>
-                          {/* ✅ রিপ্লাই বাটন */}
+                          <span className="text-[10px] font-black text-indigo-600 uppercase">
+                            {mainComment.user?.name || "Unknown User"}
+                          </span>
+                          {/* ✅ রিপ্লাই বাটন - আমি এটাকে আরও বোল্ড করেছি */}
                           <button 
                             onClick={(e) => {
                                 e.preventDefault();
                                 setReplyToId(mainComment.id);
                                 setReplyingUserName(mainComment.user?.name);
                             }}
-                            className="text-[10px] font-black text-blue-600 hover:text-indigo-800 uppercase bg-blue-50 px-2 py-1 rounded-lg cursor-pointer z-10 transition-colors"
+                            className="text-[10px] font-black text-blue-700 bg-blue-100 px-3 py-1 rounded-full hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
                           >
-                            Reply
+                            REPLY
                           </button>
                         </div>
-                        <p className="text-[13px] text-gray-700 font-medium leading-relaxed">{mainComment.text || mainComment.content}</p>
+                        {/* আপনার ডাটাবেজে ফিল্ডের নাম 'content', তাই এখানে content চেক করছি */}
+                        <p className="text-[13px] text-gray-800 font-medium">
+                          {mainComment.content || mainComment.text || "No message content"}
+                        </p>
                       </div>
 
-                      {/* নেস্টেড রিপ্লাইগুলো */}
+                      {/* রিপ্লাই লিস্ট */}
                       {mainComment.replies && mainComment.replies.length > 0 && (
-                        <div className="ml-8 space-y-2 border-l-2 border-indigo-50 pl-4 mt-1">
+                        <div className="ml-8 space-y-2 border-l-2 border-indigo-100 pl-4 mt-1">
                           {mainComment.replies.map((reply: any) => (
-                            <div key={reply.id} className="p-3 bg-indigo-50/30 rounded-2xl border border-indigo-50/50">
-                                <span className="text-[9px] font-black text-emerald-600 uppercase block mb-1">{reply.user?.name || "Member"}</span>
-                                <p className="text-[12px] text-gray-600 leading-tight">{reply.text || reply.content}</p>
+                            <div key={reply.id} className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <span className="text-[9px] font-black text-emerald-600 uppercase block mb-1">
+                                  {reply.user?.name || "Member"}
+                                </span>
+                                <p className="text-[12px] text-gray-700">
+                                  {reply.content || reply.text}
+                                </p>
                             </div>
                           ))}
                         </div>
@@ -195,9 +183,9 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
             {/* ইনপুট এরিয়া */}
             <div className="flex flex-col gap-2 mt-4 bg-gray-50 p-3 rounded-2xl">
               {replyingUserName && (
-                <div className="flex items-center justify-between px-3 py-1 bg-indigo-100 rounded-lg animate-pulse">
+                <div className="flex items-center justify-between px-3 py-1 bg-indigo-100 rounded-lg">
                     <span className="text-[10px] font-bold text-indigo-700">Replying to {replyingUserName}</span>
-                    <button onClick={() => {setReplyToId(null); setReplyingUserName(null)}} className="text-xs text-rose-500 font-black px-1">✕</button>
+                    <button onClick={() => {setReplyToId(null); setReplyingUserName(null)}} className="text-xs text-rose-500 font-black">✕</button>
                 </div>
               )}
               <div className="flex gap-2">
@@ -205,12 +193,12 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={replyToId ? `রিপ্লাই দিন...` : "মতামত লিখুন..."}
-                  className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-black"
+                  placeholder={replyToId ? "রিপ্লাই দিন..." : "মতামত লিখুন..."}
+                  className="flex-1 px-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none text-black"
                 />
                 <button
                   onClick={handleCommentSubmit}
-                  className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md active:scale-95 transition-all"
+                  className="px-5 py-2 text-xs font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700"
                 >
                   {replyToId ? "REPLY" : "POST"}
                 </button>
