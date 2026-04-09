@@ -15,7 +15,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [commentText, setCommentText] = useState("");
   
-  // ✅ ভোটের জন্য স্টেটগুলো আবার যোগ করা হলো
   const [votes, setVotes] = useState(idea.voteCount || 0);
   const [isVoting, setIsVoting] = useState(false);
   const [isVoted, setIsVoted] = useState(false); 
@@ -27,7 +26,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
   const ideaId = idea.id;
 
-  // ✅ ভোট হ্যান্ডেল করার ফাংশন
   const handleVote = async () => {
     if (!currentUser || isVoting) return;
     try {
@@ -49,7 +47,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     }
   };
 
-  // ✅ কমেন্ট সাবমিট বা আপডেট করার ফাংশন
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
@@ -107,7 +104,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     }
   };
 
-  // ✅ ডিলিট করার ফাংশন
   const handleDeleteComment = async (commentId: string, isReply: boolean, parentId?: string) => {
     if (!confirm("আপনি কি নিশ্চিত?")) return;
     try {
@@ -139,12 +135,13 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       <div className="flex flex-col gap-4 pt-5 mt-auto border-t border-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* ✅ ভোট বাটন আবার যোগ করা হলো */}
+            {/* ✅ এখানে VOTE লেখা যোগ করা হয়েছে */}
             <button 
               onClick={handleVote} 
-              className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all ${isVoted ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-gray-100 text-gray-900 hover:bg-gray-50'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all ${isVoted ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white border-gray-100 text-gray-900 hover:bg-gray-50'}`}
             >
-              🔥 <span className="text-sm font-black">{votes}</span>
+              <span className="text-xs font-black uppercase">Vote</span>
+              <span className="text-sm font-black">{votes}</span>
             </button>
 
             <button 
