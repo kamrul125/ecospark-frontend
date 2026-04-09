@@ -38,7 +38,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
       if (res.data?.success) {
         const newComment = res.data.data;
-        // যদি এটি রিপ্লাই হয়, তবে মেইন কমেন্টের replies এরে-তে পুশ করবে
         if (replyToId) {
           setComments((prev: any[]) =>
             prev.map((c) =>
@@ -65,7 +64,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
     try {
       setIsVoting(true);
       await API.post(`/ideas/${ideaId}/vote`);
-      
       if (isVoted) {
         setVotes((prev: number) => prev - 1);
         setIsVoted(false);
@@ -75,9 +73,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
       }
     } catch (err) { 
       alert("Error processing vote."); 
-    } finally { 
-      setIsVoting(false); 
-    }
+    } finally { setIsVoting(false); }
   };
 
   return (
@@ -137,20 +133,6 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                 Edit
               </button>
             )}
-
-            {currentUser && (idea.userId === currentUser.id || currentUser.role === "ADMIN") && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (onDelete) onDelete(ideaId);
-                }} 
-                className="px-4 py-2.5 text-[10px] font-black text-rose-600 bg-rose-50 rounded-2xl hover:bg-rose-600 hover:text-white transition-all uppercase tracking-widest shadow-sm border border-rose-100"
-              >
-                Delete
-              </button>
-            )}
-
             <Link href={`/ideas/${ideaId}`} className="px-5 py-2.5 text-[11px] font-black text-white bg-gray-900 rounded-2xl hover:bg-emerald-600 transition-all shadow-md">
               View
             </Link>
@@ -159,32 +141,31 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
 
         {showCommentBox && (
           <div className="mt-4 space-y-4 border-t pt-4 border-gray-50">
-            {/* কমেন্ট লিস্ট */}
             <div className="pr-1 space-y-4 overflow-y-auto max-h-80 custom-scrollbar">
               {comments.filter((c: any) => !c.parentId).length > 0 ? (
                 comments
                   .filter((c: any) => !c.parentId)
                   .map((mainComment: any) => (
                     <div key={mainComment.id} className="flex flex-col gap-2 mb-4">
-                      {/* মেইন কমেন্ট বক্স */}
+                      {/* মেইন কমেন্ট */}
                       <div className="p-4 bg-gray-50/50 border border-gray-100 rounded-3xl relative">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">{mainComment.user?.name || "Member"}</span>
-                          {/* ✅ রিপ্লাই বাটন */}
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <span className="text-[10px] font-black text-indigo-600 uppercase flex-1">{mainComment.user?.name || "Member"}</span>
+                          {/* ✅ সুস্পষ্ট রিপ্লাই বাটন - টেস্ট করার জন্য কালার নীল করে দিলাম */}
                           <button 
                             onClick={() => {
                                 setReplyToId(mainComment.id);
                                 setReplyingUserName(mainComment.user?.name);
                             }}
-                            className="text-[10px] font-bold text-gray-400 hover:text-indigo-600 uppercase transition-all"
+                            className="text-[10px] font-black text-blue-600 hover:text-indigo-800 uppercase bg-blue-50 px-2 py-0.5 rounded cursor-pointer z-10"
                           >
                             Reply
                           </button>
                         </div>
-                        <p className="text-[13px] text-gray-700 leading-relaxed font-medium">{mainComment.text || mainComment.content}</p>
+                        <p className="text-[13px] text-gray-700 font-medium">{mainComment.text || mainComment.content}</p>
                       </div>
 
-                      {/* ✅ নেস্টেড রিপ্লাইগুলো দেখানো */}
+                      {/* নেস্টেড রিপ্লাই */}
                       {mainComment.replies && mainComment.replies.length > 0 && (
                         <div className="ml-8 space-y-2 border-l-2 border-indigo-50 pl-4 mt-1">
                           {mainComment.replies.map((reply: any) => (
@@ -202,7 +183,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
               )}
             </div>
 
-            {/* ইনপুট ফিল্ড (কমেন্ট এবং রিপ্লাই উভয়ের জন্য) */}
+            {/* ইনপুট ফিল্ড */}
             <div className="flex flex-col gap-2 mt-4">
               {replyingUserName && (
                 <div className="flex items-center justify-between px-3 py-1 bg-indigo-50 rounded-lg">
@@ -216,7 +197,7 @@ const IdeaCard = ({ idea, currentUser, onEdit, onDelete }: IdeaProps) => {
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder={replyToId ? "রিপ্লাই লিখুন..." : "আপনার মতামত লিখুন..."}
-                  className="flex-1 px-4 py-3 text-sm bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
+                  className="flex-1 px-4 py-3 text-sm bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium text-black"
                 />
                 <button
                   onClick={handleCommentSubmit}
